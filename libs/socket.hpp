@@ -94,6 +94,16 @@ namespace socketx{
             int connect_to(const std::string hostname, const std::string port);
     };
 
+    class select{
+        private:
+            fd_set *fdset;
+        public:
+            void zero(int fd);
+            void set(int fd);
+            void clr(int fd);
+            int is_set(int fd);
+    };
+
 }
 
 #endif
