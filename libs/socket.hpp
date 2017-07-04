@@ -94,14 +94,30 @@ namespace socketx{
             int connect_to(const std::string hostname, const std::string port);
     };
 
+
+    /*In unix, select will change the value of sets.
+    * So we have to reset the set that needs to be selected.
+    * Here we provide a wrapper for automatically managing 
+    * fd_sets and maxfd. By using this wrapper, you need not 
+    * reset the fd_set or compute the maxfd.
+    */
     class select{
         private:
-            fd_set *fdset;
+            bitset<1024> fd_bitset;
         public:
-            void zero(int fd);
-            void set(int fd);
-            void clr(int fd);
-            int is_set(int fd);
+            int maxfd;
+            fd_set *readset;
+            fd_set *writeset;
+            fd_set *exceptset;
+            struct timeval *timeout;
+
+            select();
+
+            int select_wrapper();
+            void fd_zero(fd_set *fdset);
+            void fd_set(int fd,fd_set *fdset);
+            void fd_clr(int fd,fd_set *fdset);
+            int fd_isset(int fd,fd_set *fdset);
     };
 
 }
