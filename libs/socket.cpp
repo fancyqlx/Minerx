@@ -299,15 +299,18 @@ namespace socketx{
 
     /****************class select*********************/
     
-    int select::com_maxfd(){
-        int ret = 0;
-        if(readset){
-
+    void select::comp_maxfd(){
+        int n = fd_bitset.size();
+        for(int i=0;i<n;++i){
+            if(fd_bitset[i]==1 && i>maxfd)
+                maxfd = i;
         }
     }
 
     select::select():maxfd(0),readset(NULL),writeset(NULL),exceptset(NULL),timeout(NULL){
-
+        fd_zero(readset);
+        fd_zero(writeset);
+        fd_zero(exceptset);
     }
 
     int select::select_wrapper(){
@@ -316,21 +319,25 @@ namespace socketx{
 
     void select::fd_zero(fd_set *fdset){
         FD_ZERO(fdset);
+        fd_bitset.reset();
+        maxfd = 0;
     }
 
     void select::fd_set(int fd,fd_set *fdset){
         FD_SET(fd,fdset);
+        fd_bitset[fd] = 1;
+        if(fd>maxfd) maxfd = fd;
     }
 
     void select::fd_clr(int fd,fd_set *fdset){
         FD_CLR(fd,fdset);
-
+        fd_bitset[fd] = 0;
+        if(fd==maxfd) comp_maxfd();
     }
 
     int select::fd_isset(int fd,fd_set *fdset){
         return FD_ISSET(fd,fdset);
     }
 
-
-
+    
 }

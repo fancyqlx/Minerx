@@ -104,6 +104,7 @@ namespace socketx{
     class select{
         private:
             bitset<1024> fd_bitset;
+            void comp_maxfd();
         public:
             int maxfd;
             fd_set *readset;

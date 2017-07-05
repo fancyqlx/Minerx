@@ -10,8 +10,6 @@ void handle_task(int connfd);
 /*Schedule the task distribution among miners*/
 void scheduler();
 
-
-
 int main(int argc,char** argv){
 
     if(argc!=3){
@@ -25,29 +23,39 @@ int main(int argc,char** argv){
     /*Create a thread pool for handling clients requests*/
     socketx::thread_pool pool(5);
 
+    /*Create select object*/
+    socketx::select select_obj;
+    /*Create two server socket, one for listening clients and 
+    * another for listening miners.
+    */
+    socketx::server_socket conn_client;
+    socketx::server_socket conn_miner;
+    int listen_client = conn_client.listen_to(client_port);
+    int listen_miner = conn_miner.listen_to(miner_port);
 
     /*Select a socket*/
-
-
-    /*Handle clients connections*/
-
-    /*Handle miners connections*/
-
-    /*Manage miners*/
-
-
-    pool.submit(echo_send);
-
     while(1){
-        int connfd = server.accept_from();
-        if(connfd>=0){
-            std::string hostname = server.get_peername(connfd);
-            size_t hostport = server.get_port();
-            std::cout<<"connected to ("<<hostname<<", "<<hostport<<")"<<std::endl;
-            pool.submit(std::bind(echo_receive,connfd));
-            mut.lock();
-            fdlist.push_back(connfd);
-            mut.unlock();
+        /*Put the listening fd into readset of select obj*/
+        select_obj.fd_set(listen_client,select_obj.readset);
+        select_obj.fd_set(listen_miner,select_obj.readset);
+
+        select_obj.select_wrapper();
+
+        /*Handle clients connections*/
+        if(select_obj.fd_isset(listen_client,select_obj.readset)){
+            int connfd = conn_client.accept_from();
+            std::string hostname = conn_client.get_peername(connfd);
+            size_t hostport = conn_client.get_port();
+            std::cout<<"recieve a request from ("<<hostname<<", "<<hostport<<")"<<std::endl;
+            pool.submit(std::bind(handle_task,connfd));
+        }
+
+        /*Handle miners connections*/
+        if(select_obj.fd_isset(listen_miner,select_obj.readset)){
+            int connfd = conn_miner.accept_from();
+            std::string hostname = conn_miner.get_peername(connfd);
+            size_t hostport = conn_miner.get_port();
+            std::cout<<"recieve a request from ("<<hostname<<", "<<hostport<<")"<<std::endl;
         }
     }
     exit(0);
