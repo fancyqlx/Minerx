@@ -10,16 +10,16 @@ CFLAGS += -I$(DIR_SRC) -I$(DIR_LIB) -std=c++11 -pthread
 SRC_OBJ = $(patsubst %.cpp, %.o, ${SRC})
 LIB_OBJ = $(patsubst %.cpp, %.o, ${LIB})
 
-all: client miner server 
+all: client miner server
 
-client: client.o $(LIB_OBJ)
-	g++ $(CFLAGS) client.o $(LIB_OBJ) -o client
+client: ${DIR_SRC}/client.o $(LIB_OBJ)
+	g++ $(CFLAGS) ${DIR_SRC}/client.o $(LIB_OBJ) -o ${DIR_SRC}/client
 
-miner: miner.o $(LIB_OBJ)
-	g++ $(CFLAGS) miner.o $(LIB_OBJ) -o miner
+miner: ${DIR_SRC}/miner.o $(LIB_OBJ)
+	g++ $(CFLAGS) ${DIR_SRC}/miner.o $(LIB_OBJ) -o ${DIR_SRC}/miner
 
-server: server.o $(LIB_OBJ)
-	g++ $(CFLAGS) server.o $(LIB_OBJ) -o server
+server: ${DIR_SRC}/server.o $(LIB_OBJ)
+	g++ $(CFLAGS) ${DIR_SRC}/server.o $(LIB_OBJ) -o ${DIR_SRC}/server
 
 ${DIR_SRC}/%.o:$(DIR_SRC)/%.cpp
 	g++ $(CFLAGS) -c $< -o $@

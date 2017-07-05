@@ -15,7 +15,7 @@ int main(int argc, char **argv){
     client.communication_init(client_fd);
 
     int stdin_fd = fileno(stdin);
-    socket::select select_obj;
+    socketx::select select_obj;
 
     /*input msg and nonce for hashing*/
     struct packet pat("request");
@@ -30,7 +30,7 @@ int main(int argc, char **argv){
 
         /*Handle the messages from the server*/
         if(select_obj.fd_isset(client_fd,select_obj.readset)){
-            socket::message msg = client.recvmsg();
+            socketx::message msg = client.recvmsg();
 
             /*Decapsulate the message*/
             pat = deserialization(msg.get_data(),msg.get_size());
@@ -43,9 +43,9 @@ int main(int argc, char **argv){
         /*Handle the data from the stdin*/
         if(select_obj.fd_isset(stdin_fd,select_obj.readset)){
             /*encapsulate the message*/
-            cin>>pat.msg>>pat.number;
+            std::cin>>pat.msg>>pat.number;
             char * data = serialization(pat);
-            socket::message msg(data,sizeof(data));
+            socketx::message msg(data,sizeof(data));
 
             /*Send the message, then wait for the result*/
             client.sendmsg(client_fd,msg);

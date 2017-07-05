@@ -18,6 +18,7 @@
 #include <iostream>
 #include <vector>
 #include <queue>
+#include <bitset>
 
 #include <memory>
 #include <thread>
