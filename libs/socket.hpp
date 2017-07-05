@@ -31,8 +31,10 @@ namespace socketx{
             size_t msize;
             char *data;
         public:
+            message()=default;
             message(void * data_, size_t size_);
-            size_t size() const;
+            message& operator=(const message &msg);
+            size_t get_size() const;
             char * get_data() const;
     };
 

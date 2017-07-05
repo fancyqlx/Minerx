@@ -47,7 +47,12 @@ namespace socketx{
         data = (char *)data_;
     }
 
-    size_t message::size() const{
+    message& message::message(const message& msg){
+        msize = msg.get_size();
+        data = msg.get_data();
+    }
+
+    size_t message::get_size() const{
         return msize;
     }
 

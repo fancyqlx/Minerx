@@ -1,8 +1,4 @@
-#include "socket.hpp"
-#include "threadx.hpp"
-#include <iostream>
-#include <string>
-
+#include "header.hpp"
 
 /*Handle tasks from a connection*/
 void handle_task(int connfd);
