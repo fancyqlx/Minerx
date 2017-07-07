@@ -47,9 +47,10 @@ namespace socketx{
         data = (char *)data_;
     }
 
-    message& message::message(const message& msg){
+    message& message::operator=(const message& msg){
         msize = msg.get_size();
         data = msg.get_data();
+        return *this;
     }
 
     size_t message::get_size() const{
@@ -171,7 +172,7 @@ namespace socketx{
 
     /*Send and receive messages*/
     ssize_t communication::sendmsg(const int fd, const message &msg){
-        size_t n = msg.size();
+        size_t n = msg.get_size();
         char * buffer = msg.get_data();
         /*Send the size of the message first*/
         if(send(fd,&n,sizeof(n))){
@@ -313,34 +314,34 @@ namespace socketx{
     }
 
     select::select():maxfd(0),readset(NULL),writeset(NULL),exceptset(NULL),timeout(NULL){
-        fd_zero(readset);
-        fd_zero(writeset);
-        fd_zero(exceptset);
+        FD_zero(readset);
+        FD_zero(writeset);
+        FD_zero(exceptset);
     }
 
     int select::select_wrapper(){
         return ::select(maxfd+1,readset,writeset,exceptset,timeout);
     }
 
-    void select::fd_zero(fd_set *fdset){
+    void select::FD_zero(fd_set *fdset){
         FD_ZERO(fdset);
         fd_bitset.reset();
         maxfd = 0;
     }
 
-    void select::fd_set(int fd,fd_set *fdset){
+    void select::FD_set(int fd,fd_set *fdset){
         FD_SET(fd,fdset);
         fd_bitset[fd] = 1;
         if(fd>maxfd) maxfd = fd;
     }
 
-    void select::fd_clr(int fd,fd_set *fdset){
+    void select::FD_clr(int fd,fd_set *fdset){
         FD_CLR(fd,fdset);
         fd_bitset[fd] = 0;
         if(fd==maxfd) comp_maxfd();
     }
 
-    int select::fd_isset(int fd,fd_set *fdset){
+    int select::FD_isset(int fd,fd_set *fdset){
         return FD_ISSET(fd,fdset);
     }
 

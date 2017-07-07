@@ -12,14 +12,14 @@ LIB_OBJ = $(patsubst %.cpp, %.o, ${LIB})
 
 all: client miner server
 
-client: ${DIR_SRC}/client.o $(LIB_OBJ)
-	g++ $(CFLAGS) ${DIR_SRC}/client.o $(LIB_OBJ) -o ${DIR_SRC}/client
+client: ${DIR_SRC}/client.o ${DIR_SRC}/header.o $(LIB_OBJ)
+	g++ $(CFLAGS) ${DIR_SRC}/client.o ${DIR_SRC}/header.o $(LIB_OBJ) -o ${DIR_SRC}/client
 
-miner: ${DIR_SRC}/miner.o $(LIB_OBJ)
-	g++ $(CFLAGS) ${DIR_SRC}/miner.o $(LIB_OBJ) -o ${DIR_SRC}/miner
+miner: ${DIR_SRC}/miner.o ${DIR_SRC}/header.o $(LIB_OBJ)
+	g++ $(CFLAGS) ${DIR_SRC}/miner.o ${DIR_SRC}/header.o $(LIB_OBJ) -o ${DIR_SRC}/miner
 
-server: ${DIR_SRC}/server.o $(LIB_OBJ)
-	g++ $(CFLAGS) ${DIR_SRC}/server.o $(LIB_OBJ) -o ${DIR_SRC}/server
+server: ${DIR_SRC}/server.o ${DIR_SRC}/header.o $(LIB_OBJ)
+	g++ $(CFLAGS) ${DIR_SRC}/server.o ${DIR_SRC}/header.o $(LIB_OBJ) -o ${DIR_SRC}/server
 
 ${DIR_SRC}/%.o:$(DIR_SRC)/%.cpp
 	g++ $(CFLAGS) -c $< -o $@

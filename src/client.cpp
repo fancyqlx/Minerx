@@ -23,13 +23,13 @@ int main(int argc, char **argv){
     
     while(1){
         /*Put client_fd and stdin_fd into readset*/
-        select_obj.fd_set(client_fd,select_obj.readset);
-        select_obj.fd_set(stdin_fd,select_obj.readset);
+        select_obj.FD_set(client_fd,select_obj.readset);
+        select_obj.FD_set(stdin_fd,select_obj.readset);
 
         select_obj.select_wrapper();
 
         /*Handle the messages from the server*/
-        if(select_obj.fd_isset(client_fd,select_obj.readset)){
+        if(select_obj.FD_isset(client_fd,select_obj.readset)){
             socketx::message msg = client.recvmsg();
 
             /*Decapsulate the message*/
@@ -41,11 +41,15 @@ int main(int argc, char **argv){
         }
 
         /*Handle the data from the stdin*/
-        if(select_obj.fd_isset(stdin_fd,select_obj.readset)){
+        if(select_obj.FD_isset(stdin_fd,select_obj.readset)){
             /*encapsulate the message*/
             std::cin>>pat.msg>>pat.number;
+            pat.msg_size = pat.msg.size();
+            /*The bytes of data you need to send*/
+            size_t n = sizeof(size_t) * 3 + pat.type_size + pat.msg_size;
+            /*Serialize the data from the struct to the bytes array*/
             char * data = serialization(pat);
-            socketx::message msg(data,sizeof(data));
+            socketx::message msg(data,n);
 
             /*Send the message, then wait for the result*/
             client.sendmsg(client_fd,msg);

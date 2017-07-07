@@ -9,9 +9,10 @@
 struct packet{
     size_t type_size;
     std::string type;
+    size_t msg_size;
     std::string msg;
     size_t number;
-    packet(std::string str):type(str),msg(),number(0){
+    packet(std::string str):type(str),msg_size(0),msg(),number(0){
         type_size = type.size();
     }
 };

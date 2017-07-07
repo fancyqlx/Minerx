@@ -117,10 +117,10 @@ namespace socketx{
             select();
 
             int select_wrapper();
-            void fd_zero(fd_set *fdset);
-            void fd_set(int fd,fd_set *fdset);
-            void fd_clr(int fd,fd_set *fdset);
-            int fd_isset(int fd,fd_set *fdset);
+            void FD_zero(fd_set *fdset);
+            void FD_set(int fd,fd_set *fdset);
+            void FD_clr(int fd,fd_set *fdset);
+            int FD_isset(int fd,fd_set *fdset);
     };
 
 }

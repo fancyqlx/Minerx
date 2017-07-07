@@ -32,13 +32,13 @@ int main(int argc,char** argv){
     /*Select a socket*/
     while(1){
         /*Put the listening fd into readset of select obj*/
-        select_obj.fd_set(listen_client,select_obj.readset);
-        select_obj.fd_set(listen_miner,select_obj.readset);
+        select_obj.FD_set(listen_client,select_obj.readset);
+        select_obj.FD_set(listen_miner,select_obj.readset);
 
         select_obj.select_wrapper();
 
         /*Handle clients connections*/
-        if(select_obj.fd_isset(listen_client,select_obj.readset)){
+        if(select_obj.FD_isset(listen_client,select_obj.readset)){
             int connfd = conn_client.accept_from();
             std::string hostname = conn_client.get_peername(connfd);
             size_t hostport = conn_client.get_port();
@@ -47,7 +47,7 @@ int main(int argc,char** argv){
         }
 
         /*Handle miners connections*/
-        if(select_obj.fd_isset(listen_miner,select_obj.readset)){
+        if(select_obj.FD_isset(listen_miner,select_obj.readset)){
             int connfd = conn_miner.accept_from();
             std::string hostname = conn_miner.get_peername(connfd);
             size_t hostport = conn_miner.get_port();
