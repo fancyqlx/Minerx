@@ -175,11 +175,12 @@ namespace socketx{
         size_t n = msg.get_size();
         char * buffer = msg.get_data();
         /*Send the size of the message first*/
-        if(send(fd,&n,sizeof(n))){
+        if(send(fd,&n,sizeof(n))>0){
             /*Send data*/
-            send(fd,buffer,n);
+            if(send(fd,buffer,n)>0)
+                return 1;
         }
-        return n;
+        return -1;
     }
 
     message communication::recvmsg(){

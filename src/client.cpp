@@ -31,7 +31,10 @@ int main(int argc, char **argv){
         /*Handle the messages from the server*/
         if(select_obj.FD_isset(client_fd,&select_obj.readset)){
             socketx::message msg = client.recvmsg();
-
+            if(msg.get_size()==0){
+                std::cerr<<"Connection interrupted...."<<std::endl;
+                break;
+            }
             /*Decapsulate the message*/
             pat = deserialization(msg.get_data(),msg.get_size());
             if(pat.type == "result")
@@ -43,16 +46,22 @@ int main(int argc, char **argv){
         /*Handle the data from the stdin*/
         if(select_obj.FD_isset(stdin_fd,&select_obj.readset)){
             /*encapsulate the message*/
-            std::cin>>pat.msg>>pat.number;
-            pat.msg_size = pat.msg.size();
-            /*The bytes of data you need to send*/
-            size_t n = sizeof(size_t) * 3 + pat.type_size + 1 + pat.msg_size + 1;
-            /*Serialize the data from the struct to the bytes array*/
-            char * data = serialization(pat);
-            socketx::message msg(data,n);
+            if(std::cin>>pat.msg>>pat.number){
+                pat.msg_size = pat.msg.size();
+                /*The bytes of data you need to send*/
+                size_t n = sizeof(size_t) * 3 + pat.type_size + 1 + pat.msg_size + 1;
+                /*Serialize the data from the struct to the bytes array*/
+                char * data = serialization(pat);
+                socketx::message msg(data,n);
 
-            /*Send the message, then wait for the result*/
-            client.sendmsg(client_fd,msg);
+                /*Send the message, then wait for the result*/
+                client.sendmsg(client_fd,msg);
+            }else{
+                std::cin.clear();
+                std::cerr<<"Bad input...Please input again!"<<std::endl;
+            }
+            
+            
         }
     }
     

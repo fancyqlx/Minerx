@@ -38,13 +38,13 @@ struct packet deserialization(char * data, size_t n){
     size_t count = 0;
 
     /*Get type_size and type*/
-    if(count <= n){
+    if(count < n){
         memcpy(&type_size,p,sizeof(size_t));
         p += sizeof(size_t);
         count += sizeof(size_t);
     }
     char *s = new char[type_size+1];
-    if(count <= n){
+    if(count < n){
         memcpy(s,p,type_size+1);
         type = std::string(s);
         p += type_size+1;
@@ -52,12 +52,12 @@ struct packet deserialization(char * data, size_t n){
     }
     
     /*Get msg_size and msg*/
-    if(count <= n){
+    if(count < n){
         memcpy(&msg_size,p,sizeof(size_t));
         p += sizeof(size_t);
         count += sizeof(size_t);
     }
-    if(count <= n){
+    if(count < n){
         s = new char[msg_size+1];
         memcpy(s,p,msg_size+1);
         msg = std::string(s);
@@ -68,7 +68,7 @@ struct packet deserialization(char * data, size_t n){
     delete s;
 
     /*Get the number*/
-    if(count <= n){
+    if(count < n){
         memcpy(&number,p,sizeof(size_t));
     }
 
@@ -78,7 +78,7 @@ struct packet deserialization(char * data, size_t n){
     pat.msg_size = msg_size;
     pat.msg = msg;
     pat.number = number;
-
+    
     return pat;
 
 }

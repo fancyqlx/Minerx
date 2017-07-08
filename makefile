@@ -5,7 +5,7 @@ SRC = $(wildcard ${DIR_SRC}/*.cpp)
 LIB = $(wildcard ${DIR_LIB}/*.cpp)
 
 VPATH = $(DIR_SRC):$(DIR_LIB)
-CFLAGS += -I$(DIR_SRC) -I$(DIR_LIB) -std=c++11 -pthread
+CFLAGS += -I$(DIR_SRC) -I$(DIR_LIB) -std=c++11 -pthread -g
 
 SRC_OBJ = $(patsubst %.cpp, %.o, ${SRC})
 LIB_OBJ = $(patsubst %.cpp, %.o, ${LIB})
