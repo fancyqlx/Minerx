@@ -28,4 +28,4 @@ ${DIR_LIB}/%.o:$(DIR_LIB)/%.cpp
 	g++ $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -f $(SRC_OBJ) $(LIB_OBJ) client miner server
+	rm -f $(SRC_OBJ) $(LIB_OBJ) $(DIR_SRC)/client $(DIR_SRC)/miner $(DIR_SRC)/server
