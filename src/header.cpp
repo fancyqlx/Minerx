@@ -14,7 +14,6 @@ char * serialization(struct packet &data){
     const char * s1 = data.type.c_str();
     memcpy(p,s1,data.type_size+1);
     p += data.type_size+1;
-    //delete s1;
 
     /*Copy msg_size*/
     memcpy(p,&data.msg_size,sizeof(size_t));
@@ -24,7 +23,6 @@ char * serialization(struct packet &data){
     const char * s2 = data.msg.c_str();
     memcpy(p,s2,data.msg_size+1);
     p += data.msg_size+1;
-    //delete s2;
 
     /*Copy number*/
     memcpy(p,&data.number,sizeof(size_t));

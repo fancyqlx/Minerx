@@ -185,9 +185,10 @@ namespace socketx{
     message communication::recvmsg(){
         size_t n = 0;
         /*Receive the size of the message*/
-        if(recv(&n,sizeof(size_t))){
+        if(recv(&n,sizeof(size_t))>0){
             /*Recieve the message*/
             char * data = new char[n];
+            recv(data,n);
             return message(data,n);
         }
         else return message(nullptr,0);

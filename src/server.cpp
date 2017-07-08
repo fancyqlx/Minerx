@@ -61,6 +61,17 @@ int main(int argc,char** argv){
 /*Handle tasks from a connection*/
 void handle_task(int connfd){
     std::cout<<"handle_task"<<std::endl;
+    socketx::communication comm;
+    comm.communication_init(connfd);
+    while(1){
+        socketx::message msg = comm.recvmsg();
+        if(msg.get_size()<=0) break;
+        struct packet pat = deserialization(msg.get_data(),msg.get_size());
+        std::cout<<pat.type<<std::endl; 
+        std::cout<<pat.msg<<std::endl; 
+        std::cout<<pat.number<<std::endl; 
+   
+    }   
 }
 
 /*Schedule the task distribution among miners*/
