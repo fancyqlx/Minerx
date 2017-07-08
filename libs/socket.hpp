@@ -109,10 +109,10 @@ namespace socketx{
             void comp_maxfd();
         public:
             int maxfd;
-            fd_set *readset;
-            fd_set *writeset;
-            fd_set *exceptset;
-            struct timeval *timeout;
+            fd_set readset;
+            fd_set writeset;
+            fd_set exceptset;
+            struct timeval timeout;
 
             select();
 

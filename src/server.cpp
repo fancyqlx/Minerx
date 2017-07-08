@@ -13,8 +13,8 @@ int main(int argc,char** argv){
         exit(0);
     }
     
-    std::string client_port = argv[1];
-    std::string miner_port = argv[2];
+    std::string client_port = std::string(argv[1]);
+    std::string miner_port = std::string(argv[2]);
 
     /*Create a thread pool for handling clients requests*/
     socketx::thread_pool pool(5);
@@ -32,13 +32,13 @@ int main(int argc,char** argv){
     /*Select a socket*/
     while(1){
         /*Put the listening fd into readset of select obj*/
-        select_obj.FD_set(listen_client,select_obj.readset);
-        select_obj.FD_set(listen_miner,select_obj.readset);
+        select_obj.FD_set(listen_client,&select_obj.readset);
+        select_obj.FD_set(listen_miner,&select_obj.readset);
 
         select_obj.select_wrapper();
 
         /*Handle clients connections*/
-        if(select_obj.FD_isset(listen_client,select_obj.readset)){
+        if(select_obj.FD_isset(listen_client,&select_obj.readset)){
             int connfd = conn_client.accept_from();
             std::string hostname = conn_client.get_peername(connfd);
             size_t hostport = conn_client.get_port();
@@ -47,7 +47,7 @@ int main(int argc,char** argv){
         }
 
         /*Handle miners connections*/
-        if(select_obj.FD_isset(listen_miner,select_obj.readset)){
+        if(select_obj.FD_isset(listen_miner,&select_obj.readset)){
             int connfd = conn_miner.accept_from();
             std::string hostname = conn_miner.get_peername(connfd);
             size_t hostport = conn_miner.get_port();
@@ -55,4 +55,15 @@ int main(int argc,char** argv){
         }
     }
     exit(0);
+}
+
+
+/*Handle tasks from a connection*/
+void handle_task(int connfd){
+    std::cout<<"handle_task"<<std::endl;
+}
+
+/*Schedule the task distribution among miners*/
+void scheduler(){
+    std::cout<<"scheduler"<<std::endl;
 }

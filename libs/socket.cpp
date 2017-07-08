@@ -313,14 +313,14 @@ namespace socketx{
         }
     }
 
-    select::select():maxfd(0),readset(NULL),writeset(NULL),exceptset(NULL),timeout(NULL){
-        FD_zero(readset);
-        FD_zero(writeset);
-        FD_zero(exceptset);
+    select::select():maxfd(0){
+        FD_zero(&readset);
+        FD_zero(&writeset);
+        FD_zero(&exceptset);
     }
 
     int select::select_wrapper(){
-        return ::select(maxfd+1,readset,writeset,exceptset,timeout);
+        return ::select(maxfd+1,&readset,&writeset,&exceptset,&timeout);
     }
 
     void select::FD_zero(fd_set *fdset){

@@ -2,7 +2,7 @@
 
 /*Serialize data from packet to char* */
 char * serialization(struct packet &data){
-    size_t n = sizeof(size_t) * 3 + data.type_size+ data.msg_size;
+    size_t n = sizeof(size_t) * 3 + data.type_size + 1 + data.msg_size + 1;
     char * ret = new char[n];
     char * p = ret;
 
@@ -12,9 +12,9 @@ char * serialization(struct packet &data){
 
     /*Copy type*/
     const char * s1 = data.type.c_str();
-    memcpy(p,s1,data.type_size);
-    p += data.type_size;
-    delete s1;
+    memcpy(p,s1,data.type_size+1);
+    p += data.type_size+1;
+    //delete s1;
 
     /*Copy msg_size*/
     memcpy(p,&data.msg_size,sizeof(size_t));
@@ -22,9 +22,9 @@ char * serialization(struct packet &data){
 
     /*Copy msg*/
     const char * s2 = data.msg.c_str();
-    memcpy(p,s2,data.msg_size);
-    p += data.msg_size;
-    delete s2;
+    memcpy(p,s2,data.msg_size+1);
+    p += data.msg_size+1;
+    //delete s2;
 
     /*Copy number*/
     memcpy(p,&data.number,sizeof(size_t));
@@ -45,12 +45,12 @@ struct packet deserialization(char * data, size_t n){
         p += sizeof(size_t);
         count += sizeof(size_t);
     }
+    char *s = new char[type_size+1];
     if(count <= n){
-        char *s = new char[type_size];
-        memcpy(s,p,type_size);
-        type = new std::string(s);
-        p += type_size;
-        count += type_size;
+        memcpy(s,p,type_size+1);
+        type = std::string(s);
+        p += type_size+1;
+        count += type_size+1;
     }
     
     /*Get msg_size and msg*/
@@ -60,12 +60,14 @@ struct packet deserialization(char * data, size_t n){
         count += sizeof(size_t);
     }
     if(count <= n){
-        s = new char[msg_size];
-        memcpy(s,p,msg_size);
-        msg = new std::string(s);
-        p += msg_size;
-        count += msg_size;
+        s = new char[msg_size+1];
+        memcpy(s,p,msg_size+1);
+        msg = std::string(s);
+        p += msg_size+1;
+        count += msg_size+1;
     }
+
+    delete s;
 
     /*Get the number*/
     if(count <= n){
