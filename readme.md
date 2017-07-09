@@ -1,6 +1,6 @@
 ## Minerx
 
-Minerx is a simple project for implementing a distributed bitcoin miner. The project is writed by C/C++, and it heavily utilized library [socketx](https://github.com/fancyqlx/socketx) which is an underlying library for network programming. In addition, this project is originated from a lesson of CMU, you can find more details from [cmu440/p1](https://github.com/p1/blob/master/p1.pdf).
+Minerx is a simple project for implementing a distributed bitcoin miner. The project is writed by C/C++, and it heavily utilized library [socketx](https://github.com/fancyqlx/socketx) which is an underlying library for network programming. In addition, this project is originated from a lesson of CMU, you can find more details from [cmu440/p1](https://github.com/cmu440/p1/blob/master/p1.pdf).
 
 ### Client
 An client sends a user-specified request to the server, receives and prints the results.
