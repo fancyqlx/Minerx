@@ -49,7 +49,7 @@ int main(int argc, char **argv){
             if(std::cin>>pat.msg>>pat.number){
                 pat.msg_size = pat.msg.size();
                 /*The bytes of data you need to send*/
-                size_t n = sizeof(size_t) * 3 + pat.type_size + 1 + pat.msg_size + 1;
+                size_t n = sizeof(size_t) * 4 + pat.type_size + 1 + pat.msg_size + 1;
                 /*Serialize the data from the struct to the bytes array*/
                 char * data = serialization(pat);
                 socketx::message msg(data,n);
@@ -60,8 +60,6 @@ int main(int argc, char **argv){
                 std::cin.clear();
                 std::cerr<<"Bad input...Please input again!"<<std::endl;
             }
-            
-            
         }
     }
     

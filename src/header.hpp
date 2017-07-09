@@ -7,6 +7,7 @@
 #include <string>
 
 struct packet{
+    size_t id;
     size_t type_size;
     std::string type;
     size_t msg_size;

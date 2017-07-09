@@ -2,9 +2,13 @@
 
 /*Serialize data from packet to char* */
 char * serialization(struct packet &data){
-    size_t n = sizeof(size_t) * 3 + data.type_size + 1 + data.msg_size + 1;
+    size_t n = sizeof(size_t) * 4 + data.type_size + 1 + data.msg_size + 1;
     char * ret = new char[n];
     char * p = ret;
+
+    /*Copy id to the bytes array*/
+    memcpy(p,&data.id,sizeof(size_t));
+    p += sizeof(size_t);
 
     /*Copy type_size to the bytes array*/
     memcpy(p,&data.type_size,sizeof(size_t));
@@ -32,10 +36,17 @@ char * serialization(struct packet &data){
 
 /*Deserialize char* to packet */
 struct packet deserialization(char * data, size_t n){
-    size_t type_size=0, msg_size=0, number=0;
+    size_t id=0, type_size=0, msg_size=0, number=0;
     std::string type, msg;
     char * p = data;
     size_t count = 0;
+
+    /*Get id*/
+    if(count < n){
+        memcpy(&id,p,sizeof(size_t));
+        p += sizeof(size_t);
+        count += sizeof(size_t);
+    }
 
     /*Get type_size and type*/
     if(count < n){
@@ -74,6 +85,7 @@ struct packet deserialization(char * data, size_t n){
 
     /*Construct return packet*/
     struct packet pat(type);
+    pat.id = id;
     pat.type_size = type_size;
     pat.msg_size = msg_size;
     pat.msg = msg;
