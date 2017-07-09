@@ -45,6 +45,7 @@ int main(int argc, char **argv){
             struct packet pat = deserialization(msg.get_data(),msg.get_size());
             if(pat.type == "computation")
                 std::cout<<"Received a task from the server. The task's id is: "<<pat.id<<std::endl;
+                std::cout<<"msg string : "<<pat.msg<<"number :"<<pat.number<<std::endl;  
                 pool.submit(std::bind(computation,pat));
             else
                 std::cout<<"error..."<<std::endl;

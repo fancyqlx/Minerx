@@ -1,5 +1,15 @@
 #include "header.hpp"
 
+/*Compare function for miner_info*/
+bool less_info(struct miner_info &info1, struct miner_info &info2){
+    return info1.load<info2.load;
+}
+
+bool less_value(std::pair<int, struct miner_info> &lhs, std::pair<int, struct miner_info> &rhs){
+    return less_info(lhs.second,rhs.second);
+}
+
+
 /*Serialize data from packet to char* */
 char * serialization(struct packet &data){
     size_t n = sizeof(size_t) * 4 + data.type_size + 1 + data.msg_size + 1;
