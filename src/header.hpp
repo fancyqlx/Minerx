@@ -31,6 +31,13 @@ struct job_info{
     struct packet pat;
 }
 
+struct result_info{
+    int fd;
+    size_t result;
+    result_info(int fd_):fd(fd_),result(0){
+    }
+};
+
 /*Compare function for miner_info*/
 bool less_info(struct miner_info &info1, struct miner_info &info2);
 

@@ -1,7 +1,15 @@
 #include "header.hpp"
 
+
+/*Data struct for maintaining information of miners*/
 std::unordered_map<int, struct miner_info> miner_map;
+
+/*Data struct for storing results of each client*/
+std::unordered_map<int, std::queue<struct result_info>> result_map;
+
+/*Mutex for visiting miner_map*/
 std::mutex mut;
+
 
 /*Handle tasks from a connection*/
 void handle_task(int connfd);
@@ -32,12 +40,17 @@ int main(int argc,char** argv){
     int listen_client = conn_client.listen_to(client_port);
     int listen_miner = conn_miner.listen_to(miner_port);
 
+    select_obj.FD_set(listen_client,&select_obj.readset);
+    select_obj.FD_set(listen_miner,&select_obj.readset);
+    fd_set backup_set = select_obj.readset;
+
+    /*A map for maintaining communication channels of each miner*/
+    std::map<int, socketx::communication> comm_map;
     /*Select a socket*/
     while(1){
         /*Put the listening fd into readset of select obj*/
-        select_obj.FD_set(listen_client,&select_obj.readset);
-        select_obj.FD_set(listen_miner,&select_obj.readset);
-
+        
+        select_obj.readset = backup_set;
         select_obj.select_wrapper();
 
         /*Handle clients connections*/
@@ -55,6 +68,9 @@ int main(int argc,char** argv){
             std::string hostname = conn_miner.get_peername(connfd);
             size_t hostport = conn_miner.get_port();
             std::cout<<"recieve a join request from ("<<hostname<<", "<<hostport<<")"<<std::endl;
+            select_obj.FD_set(connfd,&backup_set);
+            comm_map[connfd] = socketx::communication();
+            comm_map[connfd].communication_init(connfd);
 
             /*Add a miner into miner_map*/
             mut.lock();
@@ -65,6 +81,31 @@ int main(int argc,char** argv){
                 std::cerr<<"Miner connection error......"<<std::endl;
             }
             mut.unlock();
+        }
+
+        /*Handle results from miners*/
+        for(auto it=miner_map.begin();it!=miner_map.end();++it){
+            if(select_obj.FD_isset(it->key,&select_obj.readset)){
+                socketx::message msg = comm_map[it->key].recvmsg();
+                if(msg.get_size()<=0){
+                    /*Need for further checking for failure*/
+                    std::cerr<<"Error..."<<std::endl;
+                    continue;
+                }
+                struct packet pat = deserialization(msg.get_data(),msg.get_size());
+                if(pat.type == "result"){
+                    /*Add a result of client pat.id into result_map*/
+                    struct result_info res = result_info(it->key);
+                    res.result = pat.number;
+                    result_map[pat.id].push(res);
+                    /*Miner it->key decrease its load by 1*/
+                    mut.lock();
+                    it->second.load -= 1;
+                    mut.unlock();
+                }else{
+                    std::cerr<<"Wrong type: "pat.type<<std::endl; 
+                }
+            }
         }
     }
     exit(0);
@@ -98,7 +139,11 @@ void handle_task(int connfd){
             }
 
             /*Wair for results*/
-
+            while(!result_map[connfd].empty()){
+                auto peer = result_map[connfd].top().fd;
+                auto result = result_map[connfd].top().result;
+                /*Erase a job_info from job_vec*/ 
+            }
 
 
         }else{
