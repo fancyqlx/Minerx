@@ -6,6 +6,7 @@
 #include <iostream>
 #include <string>
 #include <unordered_map>
+#include <map>
 
 struct packet{
     size_t id;
@@ -29,10 +30,20 @@ struct miner_info{
 struct job_info{
     int fd;
     struct packet pat;
-}
+    job_info(int fd_, struct packet pat_):fd(fd_),pat(pat_){
+    };
+};
 
+/*Result infomation.
+* fd is peer host file descriptor.
+* job_number is the number for recognizing jobs,
+* it is wrapped in packet.message sent from miners. Noting
+* that this number is the original packet.number sent from server
+* to miners.
+*/
 struct result_info{
     int fd;
+    size_t job_number;
     size_t result;
     result_info(int fd_):fd(fd_),result(0){
     }

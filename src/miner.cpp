@@ -36,17 +36,18 @@ int main(int argc, char **argv){
 
         /*Handle the messages from the server*/
         if(select_obj.FD_isset(miner_fd,&select_obj.readset)){
-            socketx::message msg = client.recvmsg();
+            socketx::message msg = miner.recvmsg();
             if(msg.get_size()==0){
                 std::cerr<<"Connection interrupted...."<<std::endl;
                 break;
             }
             /*Decapsulate the message*/
             struct packet pat = deserialization(msg.get_data(),msg.get_size());
-            if(pat.type == "computation")
+            if(pat.type == "computation"){
                 std::cout<<"Received a task from the server. The task's id is: "<<pat.id<<std::endl;
                 std::cout<<"msg string : "<<pat.msg<<"number :"<<pat.number<<std::endl;  
                 pool.submit(std::bind(computation,pat));
+            }
             else
                 std::cout<<"error..."<<std::endl;
         }
@@ -61,10 +62,15 @@ void computation(struct packet pat){
     msg += std::to_string(number);
 
     /*Hash function*/
-    std::hash(std::string) str_hash;
-    /*Encapsulate the result packet*/
+    std::hash<std::string> str_hash;
+    /*Encapsulate the result packet
+    * Here, we write the pat.number into pat.message for 
+    * recognizing differet jobs.
+    * We write the result into pat.number.
+    */
     pat.type = "result";
     pat.type_size = pat.type.size();
+    pat.msg = std::to_string(pat.number);
     pat.number = str_hash(msg);
 
     /*Add it into result queue for sending*/
@@ -78,7 +84,7 @@ void send_results(int fd){
     while(1){
         std::shared_ptr<struct packet> p = res_queue.wait_pop();
         char * data = serialization(*p);
-        size_t n = sizeof(size_t) * 4 + pat.type_size + 1 + pat.msg_size + 1;
+        size_t n = sizeof(size_t) * 4 + p->type_size + 1 + p->msg_size + 1;
         socketx::message msg(data,n);
 
         /*Sending*/

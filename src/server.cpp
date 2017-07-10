@@ -5,17 +5,17 @@
 std::unordered_map<int, struct miner_info> miner_map;
 
 /*Data struct for storing results of each client*/
-std::unordered_map<int, std::queue<struct result_info>> result_map;
+std::unordered_map<int, socketx::squeue<struct result_info>> result_map;
 
 /*Mutex for visiting miner_map*/
-std::mutex mut;
+std::mutex miner_mut;
 
 
 /*Handle tasks from a connection*/
 void handle_task(int connfd);
 
 /*Schedule the task distribution among miners*/
-vector<struct job_info> scheduler(struct packet pat);
+std::vector<struct job_info> scheduler(struct packet pat);
 
 int main(int argc,char** argv){
 
@@ -73,20 +73,20 @@ int main(int argc,char** argv){
             comm_map[connfd].communication_init(connfd);
 
             /*Add a miner into miner_map*/
-            mut.lock();
+            miner_mut.lock();
             if(!miner_map.count(connfd)){
                 struct miner_info info = miner_info(connfd);
                 miner_map[connfd] = info;
             }else{
                 std::cerr<<"Miner connection error......"<<std::endl;
             }
-            mut.unlock();
+            miner_mut.unlock();
         }
 
         /*Handle results from miners*/
         for(auto it=miner_map.begin();it!=miner_map.end();++it){
-            if(select_obj.FD_isset(it->key,&select_obj.readset)){
-                socketx::message msg = comm_map[it->key].recvmsg();
+            if(select_obj.FD_isset(it->frist,&select_obj.readset)){
+                socketx::message msg = comm_map[it->frist].recvmsg();
                 if(msg.get_size()<=0){
                     /*Need for further checking for failure*/
                     std::cerr<<"Error..."<<std::endl;
@@ -95,15 +95,17 @@ int main(int argc,char** argv){
                 struct packet pat = deserialization(msg.get_data(),msg.get_size());
                 if(pat.type == "result"){
                     /*Add a result of client pat.id into result_map*/
-                    struct result_info res = result_info(it->key);
+                    struct result_info res = result_info(it->frist);
+                    res.job_number = std::stoi(pat.msg);
                     res.result = pat.number;
                     result_map[pat.id].push(res);
+
                     /*Miner it->key decrease its load by 1*/
-                    mut.lock();
+                    miner_mut.lock();
                     it->second.load -= 1;
-                    mut.unlock();
+                    miner_mut.unlock();
                 }else{
-                    std::cerr<<"Wrong type: "pat.type<<std::endl; 
+                    std::cerr<<"Wrong type: "<<pat.type<<std::endl; 
                 }
             }
         }
@@ -116,42 +118,51 @@ int main(int argc,char** argv){
 void handle_task(int connfd){
     /*A list for maintaining job information*/
     std::vector<struct job_info> job_vec;
-    std::map<int, socketx::communication> comm_map;
+    size_t hash_result=0;
     
     socketx::communication comm_client;
     comm_client.communication_init(connfd);
     while(1){
-        socketx::message msg = comm.recvmsg();
+        socketx::message msg = comm_client.recvmsg();
         if(msg.get_size()<=0) break;
         struct packet pat = deserialization(msg.get_data(),msg.get_size());
         if(pat.type == "request"){
             job_vec = scheduler(pat);
 
-            /*Initialize communication and send data*/
-            for(auto it=job_vec.begin();it!=<job_vec.end();++it){
-                if(!comm_map.count(job_vec[i].fd)){
-                    comm_map[it->fd] = socketx::communication();
-                    comm_map[it->fd].communication_init(it->fd);
-                }
+            /*Send data*/
+            for(auto it=job_vec.begin();it!=job_vec.end();++it){
                 char * data = serialization(it->pat);
                 size_t n = sizeof(size_t) * 4 + pat.type_size + 1 + pat.msg_size + 1;
-                comm_map[it->fd].send(it->fd,socketx::message(data,n));
+                comm_client.sendmsg(it->fd,socketx::message(data,n));
             }
 
             /*Wair for results*/
-            while(!result_map[connfd].empty()){
-                auto peer = result_map[connfd].top().fd;
-                auto result = result_map[connfd].top().result;
-                /*Erase a job_info from job_vec*/ 
+            while(!job_vec.empty()){
+                auto ptr = result_map[connfd].wait_pop();
+                auto peer = ptr->fd;
+                auto job_number = ptr->job_number;
+                auto result = ptr->result;
+                hash_result = std::max(hash_result,result);
+                /*Erase a job_info from job_vec*/
+                for(auto it=job_vec.begin();it!=job_vec.end();++it){
+                    if(it->pat.number == job_number){
+                        job_vec.erase(it);
+                        break;
+                    }     
+                }
             }
 
-
+            /*Send the result back to client*/
+            pat.type = "result";
+            pat.type_size = pat.type.size();
+            pat.number = hash_result;
+            char * data = serialization(pat);
+            size_t n = sizeof(size_t) * 4 + pat.type_size + 1 + pat.msg_size + 1;
+            comm_client.sendmsg(connfd,socketx::message(data,n));
+        
         }else{
-            std::cerr<<"Wrong type: "pat.type<<std::endl; 
+            std::cerr<<"Wrong type: "<<pat.type<<std::endl; 
         }
-        
-        
-   
     }   
 }
 
@@ -167,9 +178,7 @@ std::vector<struct job_info> scheduler(struct packet pat){
         /*Increase load of miner fd*/
         p->first += 1;
         /*Construct job_info*/
-        struct job_info job;
-        job.fd = p->second;
-        job.pat = pat;
+        struct job_info job(p->second,pat);
         job.pat.number = i;
         job_vec.push_back(job);
     }
