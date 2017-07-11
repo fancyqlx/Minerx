@@ -7,6 +7,7 @@
 #include <string>
 #include <unordered_map>
 #include <map>
+#include <algorithm>
 
 struct packet{
     size_t id;
@@ -24,6 +25,8 @@ struct miner_info{
     size_t load;
     int fd;
     miner_info(int fd_):load(0),fd(fd_){     
+    }
+    miner_info():load(0),fd(0){     
     }
 };
 
@@ -50,9 +53,9 @@ struct result_info{
 };
 
 /*Compare function for miner_info*/
-bool less_info(struct miner_info &info1, struct miner_info &info2);
+bool less_info(const struct miner_info &info1, const struct miner_info &info2);
 
-bool less_value(std::pair<int, struct miner_info> &lhs, std::pair<int, struct miner_info> &rhs);
+bool less_value(const std::pair<int, struct miner_info> &lhs, const std::pair<int, struct miner_info> &rhs);
 
 /*Serialize data from packet to char* */
 char * serialization(struct packet &data);

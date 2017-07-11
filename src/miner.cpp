@@ -45,7 +45,7 @@ int main(int argc, char **argv){
             struct packet pat = deserialization(msg.get_data(),msg.get_size());
             if(pat.type == "computation"){
                 std::cout<<"Received a task from the server. The task's id is: "<<pat.id<<std::endl;
-                std::cout<<"msg string : "<<pat.msg<<"number :"<<pat.number<<std::endl;  
+                std::cout<<"msg string : "<<pat.msg<<" number: "<<pat.number<<std::endl;  
                 pool.submit(std::bind(computation,pat));
             }
             else
@@ -57,6 +57,7 @@ int main(int argc, char **argv){
 
 /*Compute the hash value for a certain packet*/
 void computation(struct packet pat){
+    std::cout<<"Computation starts: "<<pat.msg<<" "<<pat.number<<std::endl;  
     std::string msg = pat.msg;
     size_t number = pat.number;
     msg += std::to_string(number);
@@ -75,6 +76,7 @@ void computation(struct packet pat){
 
     /*Add it into result queue for sending*/
     res_queue.push(pat);
+    std::cout<<"Computation ends: "<<pat.number<<std::endl;  
 }
 
 /*Send a result from the results queue*/
@@ -88,6 +90,7 @@ void send_results(int fd){
         socketx::message msg(data,n);
 
         /*Sending*/
+        std::cout<<"sending results......"<<std::endl;
         comm.sendmsg(fd,msg);
     }
 }

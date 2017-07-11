@@ -75,7 +75,7 @@ int main(int argc,char** argv){
             /*Add a miner into miner_map*/
             miner_mut.lock();
             if(!miner_map.count(connfd)){
-                struct miner_info info = miner_info(connfd);
+                struct miner_info info(connfd);
                 miner_map[connfd] = info;
             }else{
                 std::cerr<<"Miner connection error......"<<std::endl;
@@ -85,17 +85,18 @@ int main(int argc,char** argv){
 
         /*Handle results from miners*/
         for(auto it=miner_map.begin();it!=miner_map.end();++it){
-            if(select_obj.FD_isset(it->frist,&select_obj.readset)){
-                socketx::message msg = comm_map[it->frist].recvmsg();
+            if(select_obj.FD_isset(it->first,&select_obj.readset)){
+                socketx::message msg = comm_map[it->first].recvmsg();
                 if(msg.get_size()<=0){
                     /*Need for further checking for failure*/
                     std::cerr<<"Error..."<<std::endl;
+                    select_obj.FD_clr(it->first,&backup_set);
                     continue;
                 }
                 struct packet pat = deserialization(msg.get_data(),msg.get_size());
                 if(pat.type == "result"){
                     /*Add a result of client pat.id into result_map*/
-                    struct result_info res = result_info(it->frist);
+                    struct result_info res = result_info(it->first);
                     res.job_number = std::stoi(pat.msg);
                     res.result = pat.number;
                     result_map[pat.id].push(res);
@@ -127,6 +128,8 @@ void handle_task(int connfd){
         if(msg.get_size()<=0) break;
         struct packet pat = deserialization(msg.get_data(),msg.get_size());
         if(pat.type == "request"){
+            pat.type = "computation";
+            pat.type_size = pat.type.size();
             job_vec = scheduler(pat);
 
             /*Send data*/
@@ -153,6 +156,7 @@ void handle_task(int connfd){
             }
 
             /*Send the result back to client*/
+            std::cout<<"Send results back to client"<<std::endl;
             pat.type = "result";
             pat.type_size = pat.type.size();
             pat.number = hash_result;
@@ -176,9 +180,9 @@ std::vector<struct job_info> scheduler(struct packet pat){
     for(int i=0;i<n;++i){
         auto p = std::min_element(miner_map.begin(),miner_map.end(),less_value);
         /*Increase load of miner fd*/
-        p->first += 1;
+        p->second.load += 1;
         /*Construct job_info*/
-        struct job_info job(p->second,pat);
+        struct job_info job(p->first,pat);
         job.pat.number = i;
         job_vec.push_back(job);
     }
