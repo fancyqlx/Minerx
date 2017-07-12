@@ -36,7 +36,7 @@ int main(int argc, char **argv){
 
         /*Handle the messages from the server*/
         if(select_obj.FD_isset(miner_fd,&select_obj.readset)){
-            socketx::message msg = miner.recvmsg();
+            socketx::message msg = miner.recvmsg(miner_fd);
             if(msg.get_size()==0){
                 std::cerr<<"Connection interrupted...."<<std::endl;
                 break;
@@ -45,7 +45,6 @@ int main(int argc, char **argv){
             struct packet pat = deserialization(msg.get_data(),msg.get_size());
             if(pat.type == "computation"){
                 std::cout<<"Received a task from the server. The task's id is: "<<pat.id<<std::endl;
-                std::cout<<"msg string : "<<pat.msg<<" number: "<<pat.number<<std::endl;  
                 pool.submit(std::bind(computation,pat));
             }
             else
@@ -69,10 +68,7 @@ void computation(struct packet pat){
     * recognizing differet jobs.
     * We write the result into pat.number.
     */
-    pat.type = "result";
-    pat.type_size = pat.type.size();
-    pat.msg = std::to_string(pat.number);
-    pat.number = str_hash(msg);
+    pat.init(pat.id,"result",std::to_string(number),str_hash(msg));
 
     /*Add it into result queue for sending*/
     res_queue.push(pat);

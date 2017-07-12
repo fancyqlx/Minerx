@@ -30,7 +30,7 @@ int main(int argc, char **argv){
 
         /*Handle the messages from the server*/
         if(select_obj.FD_isset(client_fd,&select_obj.readset)){
-            socketx::message msg = client.recvmsg();
+            socketx::message msg = client.recvmsg(client_fd);
             if(msg.get_size()==0){
                 std::cerr<<"Connection interrupted...."<<std::endl;
                 break;
@@ -47,7 +47,7 @@ int main(int argc, char **argv){
         if(select_obj.FD_isset(stdin_fd,&select_obj.readset)){
             /*encapsulate the message*/
             if(std::cin>>pat.msg>>pat.number){
-                pat.msg_size = pat.msg.size();
+                pat.init(pat.id,"request",pat.msg,pat.number);
                 /*The bytes of data you need to send*/
                 size_t n = sizeof(size_t) * 4 + pat.type_size + 1 + pat.msg_size + 1;
                 /*Serialize the data from the struct to the bytes array*/

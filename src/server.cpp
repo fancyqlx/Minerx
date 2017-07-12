@@ -58,7 +58,7 @@ int main(int argc,char** argv){
             int connfd = conn_client.accept_from();
             std::string hostname = conn_client.get_peername(connfd);
             size_t hostport = conn_client.get_port();
-            std::cout<<"recieve a computation request from ("<<hostname<<", "<<hostport<<")"<<std::endl;
+            std::cout<<"A client connection from ("<<hostname<<", "<<hostport<<")"<<std::endl;
             pool.submit(std::bind(handle_task,connfd));
         }
 
@@ -67,7 +67,7 @@ int main(int argc,char** argv){
             int connfd = conn_miner.accept_from();
             std::string hostname = conn_miner.get_peername(connfd);
             size_t hostport = conn_miner.get_port();
-            std::cout<<"recieve a join request from ("<<hostname<<", "<<hostport<<")"<<std::endl;
+            std::cout<<"A miner connection from ("<<hostname<<", "<<hostport<<")"<<std::endl;
             select_obj.FD_set(connfd,&backup_set);
             comm_map[connfd] = socketx::communication();
             comm_map[connfd].communication_init(connfd);
@@ -86,7 +86,7 @@ int main(int argc,char** argv){
         /*Handle results from miners*/
         for(auto it=miner_map.begin();it!=miner_map.end();++it){
             if(select_obj.FD_isset(it->first,&select_obj.readset)){
-                socketx::message msg = comm_map[it->first].recvmsg();
+                socketx::message msg = comm_map[it->first].recvmsg(it->first);
                 if(msg.get_size()<=0){
                     /*Need for further checking for failure*/
                     std::cerr<<"Error..."<<std::endl;
@@ -100,8 +100,9 @@ int main(int argc,char** argv){
                     res.job_number = std::stoi(pat.msg);
                     res.result = pat.number;
                     result_map[pat.id].push(res);
+                    std::cout<<"Received the result (result, job_number): "<<res.result<<", "<<res.job_number<<" of fd "<<pat.id<<std::endl;
 
-                    /*Miner it->key decrease its load by 1*/
+                    /*The miner decrease its load by 1*/
                     miner_mut.lock();
                     it->second.load -= 1;
                     miner_mut.unlock();
@@ -123,13 +124,13 @@ void handle_task(int connfd){
     
     socketx::communication comm_client;
     comm_client.communication_init(connfd);
+    /*Main loop for handling one client*/
     while(1){
-        socketx::message msg = comm_client.recvmsg();
+        socketx::message msg = comm_client.recvmsg(connfd);
         if(msg.get_size()<=0) break;
         struct packet pat = deserialization(msg.get_data(),msg.get_size());
         if(pat.type == "request"){
-            pat.type = "computation";
-            pat.type_size = pat.type.size();
+            pat.init(connfd,"computation",pat.msg,pat.number);
             job_vec = scheduler(pat);
 
             /*Send data*/
@@ -137,6 +138,7 @@ void handle_task(int connfd){
                 char * data = serialization(it->pat);
                 size_t n = sizeof(size_t) * 4 + pat.type_size + 1 + pat.msg_size + 1;
                 comm_client.sendmsg(it->fd,socketx::message(data,n));
+                std::cout<<"Send a job (msg, number) "<<it->pat.msg<<", "<<it->pat.number<<" to fd "<<it->fd<<std::endl;
             }
 
             /*Wair for results*/
@@ -156,10 +158,8 @@ void handle_task(int connfd){
             }
 
             /*Send the result back to client*/
-            std::cout<<"Send results back to client"<<std::endl;
-            pat.type = "result";
-            pat.type_size = pat.type.size();
-            pat.number = hash_result;
+            std::cout<<"Send results back to the client"<<std::endl;
+            pat.init(connfd,"result",pat.msg,hash_result);
             char * data = serialization(pat);
             size_t n = sizeof(size_t) * 4 + pat.type_size + 1 + pat.msg_size + 1;
             comm_client.sendmsg(connfd,socketx::message(data,n));

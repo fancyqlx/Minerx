@@ -19,6 +19,14 @@ struct packet{
     packet(std::string str):type(str),msg_size(0),msg(),number(0){
         type_size = type.size();
     }
+    void init(size_t id_, std::string type_, std::string msg_, size_t number_){
+        id = id_;
+        type = type_;
+        msg = msg_;
+        number = number_;
+        type_size = type.size();
+        msg_size = msg.size();
+    }
 };
 
 struct miner_info{
