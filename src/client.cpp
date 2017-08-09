@@ -1,67 +1,85 @@
 #include "header.hpp"
 
-int main(int argc, char **argv){
-
-    if(argc!=3){
-        std::cout<<"usage: "<<argv[0]<<"<host> "<<"<port> "<<std::endl;
-        exit(0);
-    }
-    std::string host(argv[1]);
-    std::string port(argv[2]);
-
-    /*Create a client socket and initialize it*/
-    socketx::client_socket client;
-    int client_fd = client.connect_to(host,port);
-    client.communication_init(client_fd);
-
-    int stdin_fd = fileno(stdin);
-    socketx::select select_obj;
-
-    /*input msg and nonce for hashing*/
-    struct packet pat("request");
-    std::cout<<"input string message and maximum nonce: <msg> <nonce>"<<std::endl;
-    
-    while(1){
-        /*Put client_fd and stdin_fd into readset*/
-        select_obj.FD_set(client_fd,&select_obj.readset);
-        select_obj.FD_set(stdin_fd,&select_obj.readset);
-
-        select_obj.select_wrapper();
-
-        /*Handle the messages from the server*/
-        if(select_obj.FD_isset(client_fd,&select_obj.readset)){
-            socketx::message msg = client.recvmsg(client_fd);
-            if(msg.get_size()==0){
-                std::cerr<<"Connection interrupted...."<<std::endl;
-                break;
-            }
-            /*Decapsulate the message*/
-            pat = deserialization(msg.get_data(),msg.get_size());
-            if(pat.type == "result")
-                std::cout<<"hash value: "<<pat.number<<std::endl;
-            else
-                std::cout<<"error..."<<std::endl;
+class BitCoinClient{
+    public:
+        Client(socketx::EventLoop *loop, std::string hostname, std::string port)
+        :loop_(loop), hostname_(hostname),port_(port),
+        client_(std::make_shared<socketx::Client>(loop,hostname,port)){
+            client_->setHandleConnectionFunc(std::bind(&BitCoinClient::handleConnection, this, std::placeholders::_1));
+            client_->setHandleCloseEvents(std::bind(&BitCoinClient::handleCloseEvents, this, std::placeholders::_1));
+            /*Get file descriptor of stdin and regist it into EventLoop*/
+            std::cout<<"input string message and maximum nonce: <msg> <nonce>"<<std::endl;
+            int fd = fileno(stdin);
+            stdinConn = std::make_shared<socketx::Connection>(loop_,fd);
+            stdinConn->setHandleReadEvents(std::bind(&BitCoinClient::stdinReadEvents, this, std::placeholders::_1));
+            stdinConn->registReadEvents();
         }
 
-        /*Handle the data from the stdin*/
-        if(select_obj.FD_isset(stdin_fd,&select_obj.readset)){
+        void start(){
+            client_->start();
+        }
+
+        void stdinReadEvents(std::shared_ptr<socketx::Connection> conn){
             /*encapsulate the message*/
+            struct packet pat;
             if(std::cin>>pat.msg>>pat.number){
                 pat.init(pat.id,"request",pat.msg,pat.number);
                 /*The bytes of data you need to send*/
                 size_t n = sizeof(size_t) * 4 + pat.type_size + 1 + pat.msg_size + 1;
                 /*Serialize the data from the struct to the bytes array*/
                 char * data = serialization(pat);
-                socketx::message msg(data,n);
+                socketx::Message msg(data,n);
 
                 /*Send the message, then wait for the result*/
-                client.sendmsg(client_fd,msg);
+                conn->sendmsg(msg);
             }else{
                 std::cin.clear();
                 std::cerr<<"Bad input...Please input again!"<<std::endl;
             }
+            
         }
+
+        void handleConnection(std::shared_ptr<socketx::Connection> conn){
+            printf("New connection comes, we are going to set read events!!!\n");
+            client_->setHandleReadEvents(std::bind(&BitCoinClient::handleReadEvents, this, std::placeholders::_1));
+        }
+        void handleReadEvents(std::shared_ptr<socketx::Connection> conn){
+            socketx::Message msg = conn->recvmsg();
+            if(msg.get_size()==0){
+                conn->handleClose();
+                break;
+            }
+            /*Decapsulate the message*/
+            struct packet pat = deserialization(msg.get_data(),msg.get_size());
+            if(pat.type == "result")
+                std::cout<<"hash value: "<<pat.number<<std::endl;
+            else
+                std::cout<<"error..."<<std::endl;
+        }
+        void handleCloseEvents(std::shared_ptr<socketx::Connection> conn){
+            printf("Close connection...\n");
+            loop_->quit();
+        }
+
+    private:
+        std::shared_ptr<socketx::Connection> stdinConn;
+        socketx::EventLoop *loop_;
+        std::shared_ptr<socketx::Client> client_;
+        std::string hostname_;
+        std::string port_;
+};
+
+int main(int argc, char **argv){
+    if(argc!=3){
+        fprintf(stderr,"usage: %s <host> <port>\n", argv[0]);
+        exit(0);
     }
-    
+    std::string hostname(argv[1]);
+    std::string port(argv[2]);
+    socketx::EventLoop loop;
+    BitCoinClient client(&loop,hostname,port);
+    client.start();
+    loop.loop();
+
     return 0;
 }

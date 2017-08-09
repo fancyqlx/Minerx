@@ -7,38 +7,32 @@ socketx::squeue<struct packet> res_queue;
 
 /*Compute the hash value for a certain packet*/
 void computation(struct packet pat);
+
 /*Send a result from the results queue*/
 void send_results(int fd);
 
-int main(int argc, char **argv){
+class Miner{
+    public:
+        EchoClient(socketx::EventLoop *loop, std::string hostname, std::string port)
+        :loop_(loop), hostname_(hostname),port_(port),
+        client_(std::make_shared<socketx::Client>(loop,hostname,port)){
+            miner_->setHandleConnectionFunc(std::bind(&Miner::handleConnection, this, std::placeholders::_1));
+            miner_->setHandleCloseEvents(std::bind(&Miner::handleCloseEvents, this, std::placeholders::_1));
+        }
 
-    if(argc!=3){
-        std::cout<<"usage: "<<argv[0]<<"<host> "<<"<port> "<<std::endl;
-        exit(0);
-    }
-    std::string host(argv[1]);
-    std::string port(argv[2]);
+        void start(){
+            miner_->start();
+        }
 
-    /*Create a miner socket and initialize it*/
-    socketx::client_socket miner;
-    int miner_fd = miner.connect_to(host,port);
-    miner.communication_init(miner_fd);
-    /*Create a thread pool with the default number of threads*/
-    socketx::thread_pool pool;
-    pool.submit(std::bind(send_results,miner_fd));
-
-    socketx::select select_obj;
-    
-    while(1){
-        /*Put client_fd and stdin_fd into readset*/
-        select_obj.FD_set(miner_fd,&select_obj.readset);
-        select_obj.select_wrapper();
-
-        /*Handle the messages from the server*/
-        if(select_obj.FD_isset(miner_fd,&select_obj.readset)){
+        void handleConnection(std::shared_ptr<socketx::Connection> conn){
+            printf("New connection comes, we are going to set read events!!!\n");
+            miner_->setHandleReadEvents(std::bind(&Miner::handleReadEvents, this, std::placeholders::_1));
+            pool.submit(std::bind(send_results,conn));
+        }
+        void handleReadEvents(std::shared_ptr<socketx::Connection> conn){
             socketx::message msg = miner.recvmsg(miner_fd);
             if(msg.get_size()==0){
-                std::cerr<<"Connection interrupted...."<<std::endl;
+                conn->handleClose();
                 break;
             }
             /*Decapsulate the message*/
@@ -50,7 +44,34 @@ int main(int argc, char **argv){
             else
                 std::cout<<"error..."<<std::endl;
         }
+        void handleCloseEvents(std::shared_ptr<socketx::Connection> conn){
+            printf("Close connection...\n");
+            loop_->quit();
+        }
+
+    private:
+        socketx::EventLoop *loop_;
+        std::shared_ptr<socketx::Client> miner_;
+        std::string hostname_;
+        std::string port_;
+
+        /*Create a thread pool with the default number of threads*/
+        socketx::thread_pool pool;
+};
+
+
+int main(int argc, char **argv){
+if(argc!=3){
+        fprintf(stderr,"usage: %s <host> <port>\n", argv[0]);
+        exit(0);
     }
+    std::string hostname(argv[1]);
+    std::string port(argv[2]);
+    socketx::EventLoop loop;
+    Miner miner(&loop,hostname,port);
+    miner.start();
+    loop.loop();
+
     return 0;
 }
 
@@ -76,9 +97,7 @@ void computation(struct packet pat){
 }
 
 /*Send a result from the results queue*/
-void send_results(int fd){
-    socketx::communication comm;
-    comm.communication_init(fd);
+void send_results(std::shared_ptr<socketx::Connection> conn){
     while(1){
         std::shared_ptr<struct packet> p = res_queue.wait_pop();
         char * data = serialization(*p);
@@ -87,6 +106,6 @@ void send_results(int fd){
 
         /*Sending*/
         std::cout<<"sending results......"<<std::endl;
-        comm.sendmsg(fd,msg);
+        conn->sendmsg(msg);
     }
 }

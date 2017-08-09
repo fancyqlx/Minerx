@@ -10,12 +10,45 @@ std::unordered_map<int, socketx::squeue<struct result_info>> result_map;
 /*Mutex for visiting miner_map*/
 std::mutex miner_mut;
 
-
 /*Handle tasks from a connection*/
 void handle_task(int connfd);
 
 /*Schedule the task distribution among miners*/
 std::vector<struct job_info> scheduler(struct packet pat);
+
+class handleClient{
+    public:
+        handleClient(socketx::EventLoop *loop, std::string port)
+        :loop_(loop), port_(port),
+        server_(std::make_shared<socketx::Server>(loop,port)){
+            server_->setHandleConnectionFunc(std::bind(&handleClient::handleConnection, this, std::placeholders::_1));
+            server_->setHandleCloseEvents(std::bind(&handleClient::handleCloseEvents, this, std::placeholders::_1));
+        }
+
+        void start(){
+            server_->start();
+        }
+
+        void handleConnection(std::shared_ptr<socketx::Connection> conn){
+            printf("New connection comes, we are going to put it in a queue!!!\n");
+            server_->setHandleReadEvents(std::bind(&handleClient::handleReadEvents, this, std::placeholders::_1));
+
+            std::string hostname = conn->getPeername();
+            size_t hostport = conn->getPort();
+            std::cout<<"A client connection from ("<<hostname<<", "<<hostport<<")"<<std::endl;
+            pool.submit(std::bind(handle_task,conn));
+            
+        }
+        
+        void handleCloseEvents(std::shared_ptr<socketx::Connection> conn){
+            printf("Close connection...\n");
+        }
+
+    private:
+        socketx::EventLoop *loop_;
+        std::shared_ptr<socketx::Server> server_;
+        std::string port_;
+};
 
 int main(int argc,char** argv){
 
@@ -117,16 +150,14 @@ int main(int argc,char** argv){
 
 
 /*Handle tasks from a connection*/
-void handle_task(int connfd){
+void handle_task(std::shared_ptr<socketx::Connection> conn){
     /*A list for maintaining job information*/
     std::vector<struct job_info> job_vec;
     size_t hash_result=0;
     
-    socketx::communication comm_client;
-    comm_client.communication_init(connfd);
     /*Main loop for handling one client*/
     while(1){
-        socketx::message msg = comm_client.recvmsg(connfd);
+        socketx::message msg = conn->recvmsg();
         if(msg.get_size()<=0) break;
         struct packet pat = deserialization(msg.get_data(),msg.get_size());
         if(pat.type == "request"){
