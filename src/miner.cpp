@@ -9,13 +9,13 @@ socketx::squeue<struct packet> res_queue;
 void computation(struct packet pat);
 
 /*Send a result from the results queue*/
-void send_results(int fd);
+void send_results(std::shared_ptr<socketx::Connection> conn);
 
 class Miner{
     public:
-        EchoClient(socketx::EventLoop *loop, std::string hostname, std::string port)
+        Miner(socketx::EventLoop *loop, std::string hostname, std::string port)
         :loop_(loop), hostname_(hostname),port_(port),
-        client_(std::make_shared<socketx::Client>(loop,hostname,port)){
+        miner_(std::make_shared<socketx::Client>(loop,hostname,port)){
             miner_->setHandleConnectionFunc(std::bind(&Miner::handleConnection, this, std::placeholders::_1));
             miner_->setHandleCloseEvents(std::bind(&Miner::handleCloseEvents, this, std::placeholders::_1));
         }
@@ -25,18 +25,28 @@ class Miner{
         }
 
         void handleConnection(std::shared_ptr<socketx::Connection> conn){
-            printf("New connection comes, we are going to set read events!!!\n");
+            printf("New connection comes, we are going to regist to server!!!\n");
             miner_->setHandleReadEvents(std::bind(&Miner::handleReadEvents, this, std::placeholders::_1));
             pool.submit(std::bind(send_results,conn));
+            /*Regist as a miner*/
+            struct packet pat("miner");
+            /*The bytes of data you need to send*/
+            size_t n = sizeof(size_t) * 4 + pat.type_size + 1 + pat.msg_size + 1;
+            /*Serialize the data from the struct to the bytes array*/
+            char * data = serialization(pat);
+            socketx::Message msg(data,n);
+            /*Send the message to regist as a client*/
+            conn->sendmsg(msg);
+             printf("Registed!!!\n");
         }
         void handleReadEvents(std::shared_ptr<socketx::Connection> conn){
-            socketx::message msg = miner.recvmsg(miner_fd);
-            if(msg.get_size()==0){
+            socketx::Message msg = conn->recvmsg();
+            if(msg.getSize()==0){
                 conn->handleClose();
-                break;
+                return;
             }
             /*Decapsulate the message*/
-            struct packet pat = deserialization(msg.get_data(),msg.get_size());
+            struct packet pat = deserialization(msg.getData(),msg.getSize());
             if(pat.type == "computation"){
                 std::cout<<"Received a task from the server. The task's id is: "<<pat.id<<std::endl;
                 pool.submit(std::bind(computation,pat));
@@ -56,7 +66,7 @@ class Miner{
         std::string port_;
 
         /*Create a thread pool with the default number of threads*/
-        socketx::thread_pool pool;
+        socketx::ThreadPool pool;
 };
 
 
@@ -102,7 +112,7 @@ void send_results(std::shared_ptr<socketx::Connection> conn){
         std::shared_ptr<struct packet> p = res_queue.wait_pop();
         char * data = serialization(*p);
         size_t n = sizeof(size_t) * 4 + p->type_size + 1 + p->msg_size + 1;
-        socketx::message msg(data,n);
+        socketx::Message msg(data,n);
 
         /*Sending*/
         std::cout<<"sending results......"<<std::endl;
